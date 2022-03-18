@@ -1,0 +1,3 @@
+/home/tloku/Desktop/So2Projekt/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/tloku/Desktop/So2Projekt/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/tloku/Desktop/So2Projekt/cmake-build-debug/CMakeFiles/So2Projekt.dir
