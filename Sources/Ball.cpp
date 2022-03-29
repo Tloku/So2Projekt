@@ -3,62 +3,37 @@
 //
 
 #include "Ball.h"
-#include <unistd.h>
-
-void Ball::start() {
-    if(getDirection() == 'l') {
-        setIsGoingLeft(true);
-    } else if (getDirection() == 'p') {
-        setIsGoingLeft(false);
-    }
-    setIsGoingUp(true);
-
-    while (getBounces() != getMaxBounces()) {
-        if (goingLeft()) {
-            moveLeft();
-        } else {
-            moveRight();
-        }
-
-        if (goingUp()) {
-            moveUp();
-        } else {
-            moveDown();
-        }
-        mvwaddch(getCurrentWindow(), getY(), getX(), getModel());
-        wrefresh(getCurrentWindow());
-        usleep(200000);
-    }
-}
 
 void Ball::moveLeft() {
-    mvwaddch(getCurrentWindow(), getY(), getX(), ' ');
     x--;
-    if(x <= 1) {
+    if(x == 1) {
+        setBounces(getBounces()+1);
         setIsGoingLeft(false);
     }
 }
 
 void Ball::moveUp() {
-    mvwaddch(getCurrentWindow(), getY(), getX(), ' ');
     y--;
-    if(y <= 1) {
+    if(y == 1) {
+        setBounces(getBounces()+1);
         setIsGoingUp(false);
     }
 }
 
 void Ball::moveDown() {
-    mvwaddch(getCurrentWindow(), getY(), getX(), ' ');
     y++;
-    if(y >= getmaxy(getCurrentWindow()) - 1) {
+//    if(y >= getmaxy(getCurrentWindow()) - 2) {
+    if(y >= 30 - 1) {
+        setBounces(getBounces()+1);
         setIsGoingUp(true);
     }
 }
 
 void Ball::moveRight() {
-    mvwaddch(getCurrentWindow(), getY(), getX(), ' ');
     x++;
-    if(x >= getmaxx(getCurrentWindow()) - 1) {
+//    if(x >= getmaxx(getCurrentWindow()) - 2) {
+    if(x >= 50 - 1) {
+        setBounces(getBounces()+1);
         setIsGoingLeft(true);
     }
 }
@@ -87,13 +62,6 @@ void Ball::setY(int y) {
     Ball::y = y;
 }
 
-char Ball::getModel() const {
-    return model;
-}
-
-void Ball::setModel(char model) {
-    Ball::model = model;
-}
 
 WINDOW *Ball::getCurrentWindow() const {
     return currentWindow;
@@ -134,4 +102,21 @@ bool Ball::goingUp() const {
 void Ball::setIsGoingUp(bool isGoingUp) {
     Ball::isGoingUp = isGoingUp;
 }
+
+void Ball::setModel(const char *model) {
+    Ball::model = model;
+}
+
+const char *Ball::getModel() const {
+    return model;
+}
+
+int Ball::getSpeed() const {
+    return speed;
+}
+
+void Ball::setSpeed(int speed) {
+    Ball::speed = speed;
+}
+
 

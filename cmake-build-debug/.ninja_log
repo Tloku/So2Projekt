@@ -1,5 +1,10 @@
 # ninja log v5
 0	27	1647114433223293204	CMakeFiles/So2Projekt.dir/main.cpp.o	db1cc5a5b92efd59
-0	18	1647114450072609410	build.ninja	10d304c1ab89c236
-0	36	1647114433231293833	CMakeFiles/So2Projekt.dir/Sources/Ball.cpp.o	8d102e56d6126dd3
+0	18	1648028258138159967	build.ninja	10d304c1ab89c236
 0	57	1647189637381417523	CMakeFiles/So2Projekt.dir/Sources/Ball.cpp.o	8d102e56d6126dd3
+0	70	1648029704927320221	CMakeFiles/So2Projekt.dir/Sources/Ball.cpp.o	8d102e56d6126dd3
+0	334	1648029705191318751	CMakeFiles/So2Projekt.dir/main.cpp.o	db1cc5a5b92efd59
+0	305	1648030042867063521	CMakeFiles/So2Projekt.dir/main.cpp.o	db1cc5a5b92efd59
+1	72	1648476849938794712	CMakeFiles/So2Projekt.dir/Sources/Ball.cpp.o	8d102e56d6126dd3
+1	263	1648476850130797158	CMakeFiles/So2Projekt.dir/main.cpp.o	db1cc5a5b92efd59
+0	225	1648477932677841439	CMakeFiles/So2Projekt.dir/main.cpp.o	db1cc5a5b92efd59
