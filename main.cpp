@@ -4,11 +4,14 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <vector>
-#include <random>
+#include <thread>
+
+using namespace std;
 
 struct Box;
-void* start(void* args);
-void* rectangle(void *args);
+void start(Ball *ball, Box* myBox);
+void startBox(Box* myBox);
+void drawBoard(WINDOW* playWin, Box* myBox);
 void ballCollisionWithRectangle(Ball *ball, Box *myBox);
 
 struct Box {
@@ -17,10 +20,8 @@ struct Box {
     WINDOW* window;
 };
 
-struct thread_arg_struct {
-    Ball *ball;
-    Box *myBox;
-};
+vector<thread> ballThreads;
+vector<Ball> balls;
 
 int main(int argc, char **argv) {
     srand(time(NULL));
@@ -28,55 +29,32 @@ int main(int argc, char **argv) {
     noecho();
     cbreak();
     curs_set(false);
-    const int NUMBER_OF_BALLS = 5;
 
-    int yMax, xMax;
-    getmaxyx(stdscr, yMax, xMax);
     WINDOW * playWin = newwin(30, 50, 3, 5);
     box(playWin, 0, 0);
-    refresh();
-    wrefresh(playWin);
-    std::vector<pthread_t> threads(NUMBER_OF_BALLS);
-    pthread_t boxThread;
-    Box myBox = {6, 5, 10, true, playWin};
+    char models[] = {'O', 'C', 'D', 'E', 'J'};
 
-    std::vector<Ball> balls = {
-            Ball(playWin, 25, 15, 'l', 5, "o", 5), //rand() % 10 + 3
-            Ball(playWin, 25, 15, 'p', 5, "c", 5),
-            Ball(playWin, 25, 15, 'l', 5, "d", 5),
-            Ball(playWin, 25, 15, 'p', 5, "e", 5),
-            Ball(playWin, 25, 15, 'p', 5, "j", 5)
+    Box myBox = {6, 5, 10, true, playWin};
+    balls = {
+            Ball(playWin, 25, 30, 'l', 5, models[0], 5), //rand() % 10 + 3
+            Ball(playWin, 25, 30, 'p', 5, models[1], 6),
+            Ball(playWin, 25, 30, 'l', 5, models[2], 7),
+            Ball(playWin, 25, 30, 'p', 5, models[3], 3),
+            Ball(playWin, 25, 30, 'p', 5, models[4], 4)
     };
 
-    for(int i = 0; i < NUMBER_OF_BALLS; i++) {
-        struct thread_arg_struct args = {&balls[i], &myBox};
-        pthread_create(&threads[i], nullptr, &start, (void*)&args);
+    for(int i = 0; i < balls.size(); i++) {
+        ballThreads.push_back(thread(start, &(balls[i]), &myBox));
     }
-    pthread_create(&boxThread, nullptr, &rectangle, &myBox);
+    thread myBoxThread(startBox, &myBox);
+    thread drawBoardThread(drawBoard, playWin, &myBox);
 
-    while(true) {
-        for(int i = 0; i < balls.size(); i++) {
-            if(balls[i].getBounces() == balls[i].getMaxBounces()) {
-                std::swap(balls[i], balls[balls.size()-1]);
-                std::swap(threads[i], threads[threads.size()-1]);
+    drawBoardThread.join();
+    myBoxThread.join();
 
-                pthread_cancel(threads[threads.size() - 1]);
-                balls.pop_back();
-            }
-            mvwprintw(playWin, balls[i].getY(), balls[i].getX(), balls[i].getModel());
-
-            for(int j = 0; j < myBox.length; j++) {
-                mvwprintw(playWin, myBox.y1, myBox.x1 + j, "#"); //pozioma górna ściana
-                mvwprintw(playWin, myBox.y1 + j, myBox.x1,  "#"); //lewa pionowa ściana
-                mvwprintw(playWin, myBox.y1 + myBox.length, myBox.x1 + j, "#"); //pozioma dolna ściana
-                mvwprintw(playWin, myBox.y1 + j, myBox.x1 + myBox.length - 1, "#"); // prawa pionowa ściana
-            }
-        }
-        wrefresh(playWin);
-        fflush(stdout);
-        napms(100);
-        werase(playWin);
-        box(playWin, 0, 0);
+    for(int i = 0; i < ballThreads.size(); i++) {
+        ballThreads[i].join();
+        sleep(5);
     }
 
     getch();
@@ -84,11 +62,30 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void* start(void* argss) {
-    struct thread_arg_struct *args = (struct thread_arg_struct *)argss;
-    Ball *ball = args->ball;
-    Box *myBox = args->myBox;
-    while (ball->getBounces() != ball->getMaxBounces()) {
+void drawBoard(WINDOW* playWin, Box* myBox) {
+    while(true) {
+        for(int i = 0; i < ballThreads.size(); i++) {
+            mvwaddch(playWin, balls[i].getY(), balls[i].getX(), balls[i].getModel());
+        }
+        for(int j = 0; j < myBox->length; j++) {
+            mvwaddch(playWin, myBox->y1, myBox->x1 + j, '#'); //pozioma górna ściana
+            mvwaddch(playWin, myBox->y1 + j, myBox->x1,  '#'); //lewa pionowa ściana
+            mvwaddch(playWin, myBox->y1 + myBox->length, myBox->x1 + j, '#'); //pozioma dolna ściana
+            mvwaddch(playWin, myBox->y1 + j, myBox->x1 + myBox->length - 1, '#'); // prawa pionowa ściana
+        }
+        wrefresh(playWin);
+        fflush(stdout);
+        napms(100);
+        werase(playWin);
+        box(playWin, 0, 0);
+    }
+}
+
+void start(Ball *ball, Box* myBox) {
+    while (true) {
+        if(ball->getBounces() >= ball->getMaxBounces()) {
+            break;
+        }
         if (ball->goingLeft()) {
             ball->moveLeft();
         } else {
@@ -100,39 +97,37 @@ void* start(void* argss) {
             ball->moveDown();
         }
         ballCollisionWithRectangle(ball, myBox);
-        usleep((int)(1000000 / ball->getSpeed()));
+        usleep((int)(600000 / ball->getSpeed()));
     }
 }
 
 void ballCollisionWithRectangle(Ball *ball, Box *myBox) {
     if(ball->goingLeft()) {
-        if(ball->getX() <= myBox->x1 + myBox->length && ball->getX() >= myBox->x1 &&
+        if(ball->getX() <= myBox->x1 + myBox->length + 1 && ball->getX() >= myBox->x1 &&
                 ball->getY() >= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length) {
             ball->setIsGoingLeft(false);
         }
     } else if(!ball->goingLeft()) {
-        if(ball->getX() >= myBox->x1 && ball->getX() <= myBox->x1 + myBox->length &&
+        if(ball->getX() >= myBox->x1 - 1 && ball->getX() <= myBox->x1 + myBox->length &&
             ball->getY() >= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length) {
             ball->setIsGoingLeft(true);
         }
     }
     if(ball->goingUp()) {
-        if(ball->getY() <= myBox->y1 + myBox->length && ball->getY() >= myBox->y1 &&
+        if(ball->getY() <= myBox->y1 + myBox->length + 1 && ball->getY() >= myBox->y1 &&
             ball->getX() >= myBox->x1 && ball->getX() <= myBox->x1 + myBox->length) {
             ball->setIsGoingUp(false);
         }
     } else if (!ball->goingUp()) {
-        if(ball->getY() >= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length &&
+        if(ball->getY() >= myBox->y1 - 1 && ball->getY() <= myBox->y1 + myBox->length &&
             ball->getX() >= myBox->x1 && ball->getX() <= myBox->x1 + myBox->length)
             ball->setIsGoingUp(true);
     }
 }
 
-void *rectangle(void *args)
+void startBox(Box* myBox)
 {
-    Box *myBox = (Box*)args;
     int speedOfBox = rand() % 10 + 1;
-
     while(true) {
         if(myBox->goingDown) {
             myBox->y1++;

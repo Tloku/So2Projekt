@@ -103,11 +103,11 @@ void Ball::setIsGoingUp(bool isGoingUp) {
     Ball::isGoingUp = isGoingUp;
 }
 
-void Ball::setModel(const char *model) {
+void Ball::setModel(char model) {
     Ball::model = model;
 }
 
-const char *Ball::getModel() const {
+const char Ball::getModel() const {
     return model;
 }
 

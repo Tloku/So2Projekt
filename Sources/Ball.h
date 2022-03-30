@@ -11,11 +11,11 @@ private:
     int x, y, bounces, maxBounces, width, height, speed;
     bool isGoingLeft, isGoingUp;
     char direction;
-    const char *model;
+    char model;
     WINDOW * currentWindow;
 
 public:
-    Ball(WINDOW *currentWindow, int x, int y, char direction, int maxBounces, char *model, int speed) {
+    Ball(WINDOW *currentWindow, int x, int y, char direction, int maxBounces, char model, int speed) {
         this->currentWindow = currentWindow;
         this->x = x;
         this->y = y;
@@ -24,6 +24,7 @@ public:
         this->model = model;
         this->maxBounces = maxBounces;
         this->speed = speed;
+        this->bounces = 0;
         if(this->getDirection() == 'l') {
             this->setIsGoingLeft(true);
         } else if (getDirection() == 'p') {
@@ -73,10 +74,8 @@ public:
 
     void setBounces(int bounces);
 
-    const char *getModel() const;
-
-
-    void setModel(const char *model);
+    const char getModel() const;
+    void setModel(char model);
 
 };
 #endif //SO2PROJEKT_BALL_H
