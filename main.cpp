@@ -5,14 +5,14 @@
 #include <cstdlib>
 #include <vector>
 #include <thread>
-
-using namespace std;
+#include <list>
 
 struct Box;
 void start(Ball *ball, Box* myBox);
 void startBox(Box* myBox);
 void drawBoard(WINDOW* playWin, Box* myBox);
 void ballCollisionWithRectangle(Ball *ball, Box *myBox);
+void detectKeyPressAndCloseApp(WINDOW* win);
 
 struct Box {
     int y1, x1, length;
@@ -20,8 +20,10 @@ struct Box {
     WINDOW* window;
 };
 
-vector<thread> ballThreads;
-vector<Ball> balls;
+
+std::list<Ball> balls;
+int seconds = 1;
+bool quit = false;
 
 int main(int argc, char **argv) {
     srand(time(NULL));
@@ -35,37 +37,45 @@ int main(int argc, char **argv) {
     char models[] = {'O', 'C', 'D', 'E', 'J'};
 
     Box myBox = {6, 5, 10, true, playWin};
-    balls = {
-            Ball(playWin, 25, 30, 'l', 5, models[0], 5), //rand() % 10 + 3
-            Ball(playWin, 25, 30, 'p', 5, models[1], 6),
-            Ball(playWin, 25, 30, 'l', 5, models[2], 7),
-            Ball(playWin, 25, 30, 'p', 5, models[3], 3),
-            Ball(playWin, 25, 30, 'p', 5, models[4], 4)
-    };
 
-    for(int i = 0; i < balls.size(); i++) {
-        ballThreads.push_back(thread(start, &(balls[i]), &myBox));
+    std::thread myBoxThread(startBox, &myBox);
+    std::thread drawBoardThread(drawBoard, playWin, &myBox);
+    std::thread keyboardInputThread(detectKeyPressAndCloseApp, playWin);
+    int counter = 0;
+    std::list<std::thread> ballThreads;
+    while(!quit) {
+        if(counter == INT32_MAX) {
+            counter = 0;
+        }
+
+        balls.push_back(Ball(playWin, 25, 30, 'l', 5, models[counter++%4], rand() % 10 + 1));
+        ballThreads.push_back(std::thread(start, &(balls.back()), &myBox));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+        balls.push_back(Ball(playWin, 25, 30, 'p', 5, models[counter%4+1], rand() % 10 + 1));
+        ballThreads.push_back(std::thread(start, &(balls.back()), &myBox));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2500));
     }
-    thread myBoxThread(startBox, &myBox);
-    thread drawBoardThread(drawBoard, playWin, &myBox);
 
+    for(auto & i : ballThreads) {
+        i.join();
+    }
+    keyboardInputThread.join();
     drawBoardThread.join();
     myBoxThread.join();
 
-    for(int i = 0; i < ballThreads.size(); i++) {
-        ballThreads[i].join();
-        sleep(5);
-    }
-
-    getch();
     endwin();
     return 0;
 }
 
 void drawBoard(WINDOW* playWin, Box* myBox) {
     while(true) {
-        for(int i = 0; i < ballThreads.size(); i++) {
-            mvwaddch(playWin, balls[i].getY(), balls[i].getX(), balls[i].getModel());
+
+        if(quit) {
+            break;
+        }
+
+        for(Ball ball : balls) {
+            mvwaddch(playWin, ball.getY(), ball.getX(), ball.getModel());
         }
         for(int j = 0; j < myBox->length; j++) {
             mvwaddch(playWin, myBox->y1, myBox->x1 + j, '#'); //pozioma górna ściana
@@ -73,17 +83,29 @@ void drawBoard(WINDOW* playWin, Box* myBox) {
             mvwaddch(playWin, myBox->y1 + myBox->length, myBox->x1 + j, '#'); //pozioma dolna ściana
             mvwaddch(playWin, myBox->y1 + j, myBox->x1 + myBox->length - 1, '#'); // prawa pionowa ściana
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds (10));
         wrefresh(playWin);
-        fflush(stdout);
-        napms(100);
         werase(playWin);
         box(playWin, 0, 0);
     }
 }
 
+
+void detectKeyPressAndCloseApp(WINDOW* win) {
+    int ch = getch();
+
+    if(ch == 113 /*q*/) {
+        quit = true;
+//        delwin(win);
+//        endwin();
+//        exit(1);
+    }
+}
+
 void start(Ball *ball, Box* myBox) {
+//    std::this_thread::sleep_for(std::chrono::seconds(seconds++));
     while (true) {
-        if(ball->getBounces() >= ball->getMaxBounces()) {
+        if(ball->getBounces() >= ball->getMaxBounces() || quit) {
             break;
         }
         if (ball->goingLeft()) {
@@ -97,8 +119,9 @@ void start(Ball *ball, Box* myBox) {
             ball->moveDown();
         }
         ballCollisionWithRectangle(ball, myBox);
-        usleep((int)(600000 / ball->getSpeed()));
+        std::this_thread::sleep_for(std::chrono::microseconds((int)600000 / ball->getSpeed()));
     }
+    //delete ball;
 }
 
 void ballCollisionWithRectangle(Ball *ball, Box *myBox) {
@@ -129,6 +152,11 @@ void startBox(Box* myBox)
 {
     int speedOfBox = rand() % 10 + 1;
     while(true) {
+
+        if(quit) {
+            break;
+        }
+
         if(myBox->goingDown) {
             myBox->y1++;
 
@@ -143,6 +171,6 @@ void startBox(Box* myBox)
                 speedOfBox = rand() % 10 + 1;
             }
         }
-        usleep((int)(1200000) / speedOfBox);
+        std::this_thread::sleep_for(std::chrono::microseconds((int)1200000 / speedOfBox));
     }
 }
