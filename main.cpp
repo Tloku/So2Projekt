@@ -3,7 +3,6 @@
 #include "Sources/Ball.h"
 #include <unistd.h>
 #include <cstdlib>
-#include <vector>
 #include <thread>
 #include <list>
 
@@ -21,8 +20,10 @@ struct Box {
 };
 
 
+// kulki wpadają do prostokąta i w nim się odbijają 3 razy, po 3 odbicu wychodzą z prostokąta,
+// gdy kulka jest w prostokącie to prostokąt się nie porusza
+
 std::list<Ball> balls;
-int seconds = 1;
 bool quit = false;
 
 int main(int argc, char **argv) {
@@ -96,9 +97,6 @@ void detectKeyPressAndCloseApp(WINDOW* win) {
 
     if(ch == 113 /*q*/) {
         quit = true;
-//        delwin(win);
-//        endwin();
-//        exit(1);
     }
 }
 
@@ -121,7 +119,7 @@ void start(Ball *ball, Box* myBox) {
         ballCollisionWithRectangle(ball, myBox);
         std::this_thread::sleep_for(std::chrono::microseconds((int)600000 / ball->getSpeed()));
     }
-    //delete ball;
+
 }
 
 void ballCollisionWithRectangle(Ball *ball, Box *myBox) {
