@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <thread>
 #include <list>
+#include <algorithm>
+#include <mutex>
 
 struct Box;
 void start(Ball *ball, Box* myBox);
@@ -16,15 +18,16 @@ void detectKeyPressAndCloseApp(WINDOW* win);
 struct Box {
     int y1, x1, length;
     bool goingDown;
+    bool box_moving;
     WINDOW* window;
 };
-
 
 // kulki wpadają do prostokąta i w nim się odbijają 3 razy, po 3 odbicu wychodzą z prostokąta,
 // gdy kulka jest w prostokącie to prostokąt się nie porusza
 
 std::list<Ball> balls;
 bool quit = false;
+std::mutex boxCollisionMutex;
 
 int main(int argc, char **argv) {
     srand(time(NULL));
@@ -37,7 +40,7 @@ int main(int argc, char **argv) {
     box(playWin, 0, 0);
     char models[] = {'O', 'C', 'D', 'E', 'J'};
 
-    Box myBox = {6, 5, 10, true, playWin};
+    Box myBox = {6, 5, 10, true, true,playWin};
 
     std::thread myBoxThread(startBox, &myBox);
     std::thread drawBoardThread(drawBoard, playWin, &myBox);
@@ -51,10 +54,10 @@ int main(int argc, char **argv) {
 
         balls.push_back(Ball(playWin, 25, 30, 'l', 5, models[counter++%4], rand() % 10 + 1));
         ballThreads.push_back(std::thread(start, &(balls.back()), &myBox));
-        std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         balls.push_back(Ball(playWin, 25, 30, 'p', 5, models[counter%4+1], rand() % 10 + 1));
         ballThreads.push_back(std::thread(start, &(balls.back()), &myBox));
-        std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     }
 
     for(auto & i : ballThreads) {
@@ -101,7 +104,6 @@ void detectKeyPressAndCloseApp(WINDOW* win) {
 }
 
 void start(Ball *ball, Box* myBox) {
-//    std::this_thread::sleep_for(std::chrono::seconds(seconds++));
     while (true) {
         if(ball->getBounces() >= ball->getMaxBounces() || quit) {
             break;
@@ -124,51 +126,94 @@ void start(Ball *ball, Box* myBox) {
 
 void ballCollisionWithRectangle(Ball *ball, Box *myBox) {
     if(ball->goingLeft()) {
-        if(ball->getX() <= myBox->x1 + myBox->length + 1 && ball->getX() >= myBox->x1 &&
-                ball->getY() >= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length) {
+        if(ball->getX() <= myBox->x1 + 1 && ball->getX() <= myBox->x1 + myBox->length &&
+           ball->getY() >= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length && ball->getBouncesInside() < 3) {
+
             ball->setIsGoingLeft(false);
+            ball->setBouncesInside(ball->getBouncesInside() + 1);
+            ball->setIsInside(true);
+            ball->setModel('i');
+        } else if (ball->getBouncesInside() == 3){
+            ball->setIsInside(false);
+            ball->setModel('n');
         }
     } else if(!ball->goingLeft()) {
-        if(ball->getX() >= myBox->x1 - 1 && ball->getX() <= myBox->x1 + myBox->length &&
-            ball->getY() >= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length) {
+        if(ball->getX() >= myBox->x1 +myBox->length - 1 && ball->getX() < myBox->x1 +myBox->length &&
+           ball->getY() >= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length  && ball->getBouncesInside() < 3) {
+
             ball->setIsGoingLeft(true);
+            ball->setBouncesInside(ball->getBouncesInside() + 1);
+            ball->setIsInside(true);
+            ball->setModel('i');
+        } else if (ball->getBouncesInside() == 3){
+            ball->setIsInside(false);
+            ball->setModel('n');
         }
     }
     if(ball->goingUp()) {
-        if(ball->getY() <= myBox->y1 + myBox->length + 1 && ball->getY() >= myBox->y1 &&
-            ball->getX() >= myBox->x1 && ball->getX() <= myBox->x1 + myBox->length) {
+        if(ball->getY() <= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length &&
+           ball->getX() >= myBox->x1 && ball->getX() <= myBox->x1 + myBox->length  && ball->getBouncesInside() < 3) {
+
             ball->setIsGoingUp(false);
+            ball->setBouncesInside(ball->getBouncesInside() + 1);
+            ball->setIsInside(true);
+            ball->setModel('i');
+        } else if (ball->getBouncesInside() == 3){
+            ball->setIsInside(false);
+            ball->setModel('n');
         }
+
     } else if (!ball->goingUp()) {
-        if(ball->getY() >= myBox->y1 - 1 && ball->getY() <= myBox->y1 + myBox->length &&
-            ball->getX() >= myBox->x1 && ball->getX() <= myBox->x1 + myBox->length)
+        if(ball->getY() >= myBox->y1 + myBox->length -1 && ball->getY() >= myBox->y1  &&
+           ball->getX() >= myBox->x1 && ball->getX() <= myBox->x1 + myBox->length  && ball->getBouncesInside() < 3) {
+
             ball->setIsGoingUp(true);
+            ball->setBouncesInside(ball->getBouncesInside() + 1);
+            ball->setIsInside(true);
+            ball->setModel('i');
+        } else if (ball->getBouncesInside() == 3){
+            ball->setIsInside(false);
+            ball->setModel('n');
+        }
     }
+    boxCollisionMutex.lock();
+    int counter = 0;
+    for(Ball ballChecker : balls) {
+        if(ballChecker.isBallInside()) {
+            counter++;
+            break;
+        }
+    }
+    if(counter) {
+        myBox->box_moving = false;
+    } else {
+        myBox->box_moving = true;
+    }
+    boxCollisionMutex.unlock();
 }
 
 void startBox(Box* myBox)
 {
     int speedOfBox = rand() % 10 + 1;
     while(true) {
-
         if(quit) {
             break;
         }
-
-        if(myBox->goingDown) {
-            myBox->y1++;
-
-            if(myBox->y1 + myBox->length >= getmaxy(myBox->window) - 1) {
-                myBox->goingDown = false;
-                speedOfBox = rand() % 10 + 1;
+        if(myBox->box_moving) {
+            if(myBox->goingDown) {
+                myBox->y1++;
+                if(myBox->y1 + myBox->length >= getmaxy(myBox->window) - 1) {
+                    myBox->goingDown = false;
+                    speedOfBox = rand() % 10 + 1;
+                }
+            } else if (!myBox->goingDown) {
+                myBox->y1--;
+                if(myBox->y1 <= 0) {
+                    myBox->goingDown = true;
+                    speedOfBox = rand() % 10 + 1;
+                }
             }
-        } else if (!myBox->goingDown) {
-            myBox->y1--;
-            if(myBox->y1 <= 0) {
-                myBox->goingDown = true;
-                speedOfBox = rand() % 10 + 1;
-            }
+            std::this_thread::sleep_for(std::chrono::microseconds((int)1200000 / speedOfBox));
         }
-        std::this_thread::sleep_for(std::chrono::microseconds((int)1200000 / speedOfBox));
     }
 }

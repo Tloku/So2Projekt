@@ -119,4 +119,20 @@ void Ball::setSpeed(int speed) {
     Ball::speed = speed;
 }
 
+int Ball::getBouncesInside() const {
+    return bouncesInside;
+}
+
+void Ball::setBouncesInside(int bouncesInside) {
+    Ball::bouncesInside = bouncesInside;
+}
+
+bool Ball::isBallInside() const {
+    return isInside;
+}
+
+void Ball::setIsInside(bool isInside) {
+    Ball::isInside = isInside;
+}
+
 

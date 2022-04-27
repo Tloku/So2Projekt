@@ -8,8 +8,8 @@
 
 class Ball {
 private:
-    int x, y, bounces, maxBounces, width, height, speed;
-    bool isGoingLeft, isGoingUp;
+    int x, y, bounces, maxBounces, width, height, speed, bouncesInside;
+    bool isGoingLeft, isGoingUp, isInside;
     char direction;
     char model;
     WINDOW * currentWindow;
@@ -25,6 +25,8 @@ public:
         this->maxBounces = maxBounces;
         this->speed = speed;
         this->bounces = 0;
+        this->bouncesInside = 0;
+        this->isInside = false;
         if(this->getDirection() == 'l') {
             this->setIsGoingLeft(true);
         } else if (getDirection() == 'p') {
@@ -34,48 +36,32 @@ public:
     }
 
     int getSpeed() const;
-
     void setSpeed(int speed);
-
     void moveUp();
     void moveDown();
     void moveLeft();
     void moveRight();
-
     int getMaxBounces() const;
-
     void setMaxBounces(int maxBounces);
-
     int getX() const;
-
     void setX(int x);
-
     int getY() const;
-
     void setY(int y);
-
     WINDOW *getCurrentWindow() const;
-
     void setCurrentWindow(WINDOW *currentWindow);
-
     char getDirection() const;
-
     void setDirection(char direction);
-
     bool goingLeft() const;
-
     void setIsGoingLeft(bool isGoingLeft);
-
     bool goingUp() const;
-
     void setIsGoingUp(bool isGoingUp);
-
     int getBounces() const;
-
     void setBounces(int bounces);
-
     const char getModel() const;
     void setModel(char model);
-
+    int getBouncesInside() const;
+    void setBouncesInside(int bouncesInside);
+    bool isBallInside() const;
+    void setIsInside(bool isInside);
 };
 #endif //SO2PROJEKT_BALL_H
