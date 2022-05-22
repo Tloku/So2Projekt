@@ -1,1 +1,0 @@
-/usr/bin/c++ -lncurses -g CMakeFiles/So2Projekt.dir/main.cpp.o CMakeFiles/So2Projekt.dir/Sources/Ball.cpp.o -o So2Projekt  -lmain.cpp -lcurses /usr/lib/x86_64-linux-gnu/libform.so 

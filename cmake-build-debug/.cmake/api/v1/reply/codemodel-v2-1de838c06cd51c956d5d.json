@@ -49,8 +49,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/home/tloku/Desktop/So2Projekt/So2Projekt/cmake-build-debug",
-		"source" : "/home/tloku/Desktop/So2Projekt/So2Projekt"
+		"build" : "/home/tloku/Desktop/So2Projekt/cmake-build-debug",
+		"source" : "/home/tloku/Desktop/So2Projekt"
 	},
 	"version" : 
 	{
