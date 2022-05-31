@@ -127,7 +127,7 @@ void Ball::setBouncesInside(int bouncesInside) {
     Ball::bouncesInside = bouncesInside;
 }
 
-bool Ball::isBallInside() const {
+bool Ball::getIsInside() const {
     return isInside;
 }
 

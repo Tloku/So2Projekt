@@ -61,7 +61,7 @@ public:
     void setModel(char model);
     int getBouncesInside() const;
     void setBouncesInside(int bouncesInside);
-    bool isBallInside() const;
+    bool getIsInside() const;
     void setIsInside(bool isInside);
 };
 #endif //SO2PROJEKT_BALL_H
