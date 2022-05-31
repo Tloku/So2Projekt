@@ -26,13 +26,16 @@ struct Box {
 
 // kulki wpadają do prostokąta i w nim się odbijają 3 razy, po 3 odbicu wychodzą z prostokąta,
 // gdy kulka jest w prostokącie to prostokąt się nie porusza
+
+// wyświetlać ile kulek jest złapanych w danym momencie w prostokącie
+
 std::condition_variable cv;
 std::list<Ball> balls;
 bool quit = false;
-std::mutex boxCollisionMutex;
+std::mutex isInside;
 
 int main(int argc, char **argv) {
-    srand(time(NULL));
+    srand(time(nullptr));
     initscr();
     noecho();
     cbreak();
@@ -54,10 +57,10 @@ int main(int argc, char **argv) {
             counter = 0;
         }
 
-        balls.push_back(Ball(playWin, 25, 30, 'l', 5, models[counter++%4], rand() % 10 + 1));
+        balls.push_back(Ball(playWin, 25, 30, 'l', 5, models[counter++%4], rand() % 8 + 4));
         ballThreads.push_back(std::thread(start, &(balls.back()), &myBox));
-        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-        balls.push_back(Ball(playWin, 25, 30, 'p', 5, models[counter%4+1], rand() % 10 + 1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+        balls.push_back(Ball(playWin, 25, 30, 'p', 5, models[counter%4+1], rand() % 8 + 4));
         ballThreads.push_back(std::thread(start, &(balls.back()), &myBox));
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     }
@@ -99,7 +102,6 @@ void drawBoard(WINDOW* playWin, Box* myBox) {
     }
 }
 
-
 void detectKeyPressAndCloseApp(WINDOW* win) {
     int ch = getch();
 
@@ -124,19 +126,18 @@ void start(Ball *ball, Box* myBox) {
             ball->moveDown();
         }
 
-        bool check = false;
+        isInside.lock();
         for(Ball ballToCheck: balls) {
-            if(isInSquare(ballToCheck, myBox)) {
-                check = true;
+            if(isInSquare(ballToCheck, myBox)){
+                myBox->box_moving = false;
                 break;
+            } else {
+                cv.notify_one();
+                myBox->box_moving = true;
             }
         }
+        isInside.unlock();
 
-        if(check/*isInSquare(ball, myBox)*/) {
-            myBox->box_moving = false;
-        } else {
-            cv.notify_one();
-        }
 
         ballCollisionWithRectangle(ball, myBox);
         std::this_thread::sleep_for(std::chrono::microseconds((int)600000 / ball->getSpeed()));
@@ -178,8 +179,7 @@ void ballCollisionWithRectangle(Ball *ball, Box *myBox) {
 bool isInSquare(Ball ball, Box *myBox) {
     if(ball.getY() >= myBox->y1 && ball.getY() < myBox->y1 + myBox->length &&
         ball.getX() >= myBox->x1 && ball.getX() < myBox->x1 + myBox->length &&
-        ball.getBouncesInside() <= 3) {
-        ball.setModel('i');
+        ball.getBouncesInside() < 3) {
         return true;
     }
     return false;
@@ -187,7 +187,6 @@ bool isInSquare(Ball ball, Box *myBox) {
 
 void startBox(Box* myBox)
 {
-    static std::mutex mutex;
     int speedOfBox = rand() % 10 + 1;
     while(true) {
         if(quit) {
@@ -198,22 +197,21 @@ void startBox(Box* myBox)
             myBox->y1++;
             if(myBox->y1 + myBox->length >= getmaxy(myBox->window) - 1) {
                 myBox->goingDown = false;
-                speedOfBox = rand() % 10 + 1;
+                speedOfBox = rand() % 7 + 5;
             }
         } else if (!myBox->goingDown) {
             myBox->y1--;
-            if(myBox->y1 <= 0) {
+            if(myBox->y1 <= 2) {
                 myBox->goingDown = true;
-                speedOfBox = rand() % 10 + 1;
+                speedOfBox = rand() % 7 + 5;
             }
         }
 
         {
-            std::unique_lock<std::mutex> ul(mutex);
+            std::unique_lock<std::mutex> ul(isInside);
 
-            if (!myBox->box_moving) {
+            while(!myBox->box_moving) {
                 cv.wait(ul);
-                myBox->box_moving = true;
             }
         }
         std::this_thread::sleep_for(std::chrono::microseconds((int)1200000 / speedOfBox));
