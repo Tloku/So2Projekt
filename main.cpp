@@ -36,7 +36,8 @@ std::list<Ball> balls;
 bool quit = false;
 std::mutex isInside;
 int ballsCounter;
-std::mutex ballCounterMutex;
+std::condition_variable count_cv;
+bool stopCounting = true;
 
 int main(int argc, char **argv) {
     srand(time(nullptr));
@@ -57,20 +58,20 @@ int main(int argc, char **argv) {
     int counter = 0;
     std::list<std::thread> ballThreads;
     while(!quit) {
-        if(counter == INT32_MAX) {
+        if (counter == INT32_MAX) {
             counter = 0;
         }
 
-        balls.emplace_back(playWin, 25, 30, 'l', 5, models[counter++%4], rand() % 8 + 4);
+        balls.emplace_back(playWin, 25, 30, 'l', 5, models[counter++ % 4], rand() % 8 + 4);
         ballThreads.emplace_back(start, &(balls.back()), &myBox);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        balls.emplace_back(playWin, 25, 30, 'p', 5, models[counter%4+1], rand() % 8 + 4);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        balls.emplace_back(playWin, 25, 30, 'p', 5, models[counter % 4 + 1], rand() % 8 + 4);
         ballThreads.emplace_back(start, &(balls.back()), &myBox);
-        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(4000));
     }
 
-    for(auto & i : ballThreads) {
-        i.join();
+    for(std::thread &ballThread: ballThreads) {
+        ballThread.join();
     }
     ballCounterThread.join();
     keyboardInputThread.join();
@@ -85,6 +86,14 @@ void countBallsInsideBox(Box *myBox) {
     int counter;
 
     while(!quit) {
+        {
+            std::unique_lock<std::mutex> ul(isInside);
+
+            while(stopCounting) {
+                count_cv.wait(ul);
+            }
+        }
+
         counter = 0;
         for(Ball ball : balls){
             if(isInSquare(&ball, myBox)) {
@@ -92,7 +101,6 @@ void countBallsInsideBox(Box *myBox) {
             }
         }
         ballsCounter = counter;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -153,9 +161,12 @@ void start(Ball *ball, Box* myBox) {
         isInside.lock();
             if(isInSquare(ball, myBox)) {
                 myBox->box_moving = false;
+                stopCounting = false;
+                count_cv.notify_one();
             } else if(ballsCounter == 0){
                 cv.notify_one();
                 myBox->box_moving = true;
+                stopCounting = true;
             }
         isInside.unlock();
 
@@ -176,6 +187,7 @@ void ballCollisionWithRectangle(Ball *ball, Box *myBox) {
            ball->getY() >= myBox->y1 && ball->getY() <= myBox->y1 + myBox->length  && ball->getBouncesInside() < 3) {
             ball->setIsGoingLeft(true);
             ball->setBouncesInside(ball->getBouncesInside() + 1);
+
         }
     }
     if(ball->goingUp()) {
@@ -193,6 +205,11 @@ void ballCollisionWithRectangle(Ball *ball, Box *myBox) {
         }
     }
 
+//    if(ball->getBouncesInside() >= 0 && ball->getBouncesInside() < 3) {
+//        ball->setIsInside(true);
+//    } else {
+//        ball->setIsInside(false);
+//    }
 }
 
 bool isInSquare(Ball* ball, Box *myBox) {
